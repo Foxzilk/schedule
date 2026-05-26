@@ -409,7 +409,7 @@
                     }
 
                     // Set event info
-                    eventTitle.textContent = `🎀 ${currentEvent.name}`;
+                    eventTitle.textContent = `${currentEvent.name}`;
                     eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted}`;
                     shareUrlEl.textContent = window.location.href;
 
@@ -676,7 +676,7 @@
 
     <!-- Header / Event Section -->
     <div class="header">
-        <h1 class="event-title" id="eventTitle">🎀 Loading Event...</h1>
+        <h1 class="event-title" id="eventTitle">Loading Event...</h1>
         <p class="event-meta" id="eventCreatedAt">Created on: Loading...</p>
         <p>Select your available days → everyone sees the results!</p>
         <div class="share-link">
@@ -706,7 +706,7 @@
 
     <!-- Attendee List -->
     <div class="attendee-list">
-        <h3>👯 Attendees & Their Availability</h3>
+        <h3>👯 Attendees</h3>
         <div id="attendees"></div>
     </div>
 </body>
