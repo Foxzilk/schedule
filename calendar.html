@@ -361,7 +361,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
         import { getDatabase, ref, onValue, set, get, update } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
-        // Your complete Firebase configuration (with Asia SE1 database URL)
+        // Your complete Firebase configuration (Asia SE1 region)
         const firebaseConfig = {
             apiKey: "AIzaSyBFOfYtsqqwX4Q1kVvJB1o1Dypvm-SljgU",
             authDomain: "meetupplanner-e3d75.firebaseapp.com",
@@ -413,13 +413,13 @@
                     eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted}`;
                     shareUrlEl.textContent = window.location.href;
 
-                    // Set 12-month range
+                    // Set 12-month range (from event creation date)
                     eventStartDate = new Date(currentEvent.createdAt);
                     const eventEndDate = new Date(eventStartDate);
                     eventEndDate.setFullYear(eventEndDate.getFullYear() + 1);
 
-                    // Initialize calendar
-                    initCalendar();
+                    // Initialize calendar (first load - reset view to event creation month)
+                    initCalendar(false);
                     // Load availability data (realtime sync)
                     loadAvailabilityData();
                 })
@@ -441,11 +441,15 @@
         const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
         // --------------------------
-        // Initialize Calendar
+        // Initialize Calendar (PRESERVES CURRENT VIEW)
         // --------------------------
-        function initCalendar() {
-            currentViewStartMonth = eventStartDate.getMonth();
-            currentViewStartYear = eventStartDate.getFullYear();
+        function initCalendar(preserveView = false) {
+            // Only reset view to event creation month if explicitly told to (first load)
+            if (!preserveView) {
+                currentViewStartMonth = eventStartDate.getMonth();
+                currentViewStartYear = eventStartDate.getFullYear();
+            }
+            
             if (currentUser) userNameInput.value = currentUser;
             updateNavigation();
             calculateBestDay();
@@ -460,7 +464,8 @@
             const availabilityRef = ref(db, `meetupAvailability/${eventId}`);
             onValue(availabilityRef, (snapshot) => {
                 availabilityData = snapshot.val() || { attendees: {}, bestDay: null };
-                initCalendar();
+                // Preserve current view when data updates (e.g., after selecting a date)
+                initCalendar(true); 
             });
         }
 
@@ -492,6 +497,7 @@
             renderAttendeeList();
         };
 
+        // FIXED: Toggle Date (no view reset)
         window.toggleDate = function(dateStr) {
             if (!currentUser) return alert('Enter your name first!');
             const userDates = availabilityData.attendees[currentUser];
@@ -499,7 +505,8 @@
             index === -1 ? userDates.push(dateStr) : userDates.splice(index, 1);
             calculateBestDay();
             saveAvailabilityData();
-            renderAllCalendars();
+            // Only re-render calendar (update colors/counts) - no view reset
+            renderAllCalendars(); 
         };
 
         window.navigateMonths = function(direction) {
@@ -652,6 +659,7 @@
             });
         }
 
+        // FIXED: Back link for /schedule/ GitHub Pages path
         function showError(message) {
             document.body.innerHTML = `
                 <div class="error-message">
@@ -663,7 +671,7 @@
     </script>
 </head>
 <body>
-    <!-- Back to Homepage -->
+    <!-- Back to Events (FIXED: /schedule/ path) -->
     <a href="/schedule/index.html" class="back-btn">← Back to Events</a>
 
     <!-- Header / Event Section -->
