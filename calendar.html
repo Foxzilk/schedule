@@ -471,9 +471,21 @@
                         return;
                     }
 
+                    // --------------------------
+                    // FIX: Validate eventStartDate (critical fix for getMonth() error)
+                    // --------------------------
+                    // Check if createdAt exists and is a valid date
+                    if (!currentEvent.createdAt || isNaN(new Date(currentEvent.createdAt).getTime())) {
+                        // Fallback to current date if createdAt is missing/invalid
+                        eventStartDate = new Date();
+                        console.warn("Event 'createdAt' is missing/invalid - using current date as fallback");
+                    } else {
+                        eventStartDate = new Date(currentEvent.createdAt);
+                    }
+
                     // Set event info
-                    eventTitle.textContent = `🎀 ${currentEvent.name}`;
-                    eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted}`;
+                    eventTitle.textContent = `🎀 ${currentEvent.name || "Untitled Event"}`;
+                    eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted || new Date().toLocaleDateString()}`;
                     
                     // Set share link (mobile-friendly)
                     const shareUrl = window.location.href;
@@ -543,9 +555,16 @@
         const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
         // --------------------------
-        // Initialize Calendar (PRESERVES CURRENT VIEW)
+        // Initialize Calendar (PRESERVES CURRENT VIEW + SAFETY CHECKS)
         // --------------------------
         function initCalendar(preserveView = false) {
+            // --------------------------
+            // FIX: Additional safety check for eventStartDate
+            // --------------------------
+            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
+                eventStartDate = new Date(); // Fallback to current date
+            }
+
             // Only reset view to event creation month if explicitly told to (first load)
             if (!preserveView) {
                 currentViewStartMonth = eventStartDate.getMonth();
@@ -594,7 +613,7 @@
                 availabilityData.attendees[name] = [];
                 saveAvailabilityData();
             }
-            alert(`Hi ${name}! Click dates to mark availability for ${currentEvent.name}.`);
+            alert(`Hi ${name}! Click dates to mark availability for ${currentEvent?.name || "this event"}.`);
             renderAllCalendars();
             renderAttendeeList();
         };
@@ -612,6 +631,13 @@
         };
 
         window.navigateMonths = function(direction) {
+            // --------------------------
+            // FIX: Safety check before navigation
+            // --------------------------
+            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
+                eventStartDate = new Date();
+            }
+
             let newMonth = currentViewStartMonth + (direction * MONTHS_PER_VIEW);
             let newYear = currentViewStartYear;
 
@@ -669,6 +695,13 @@
         }
 
         function updateNavigation() {
+            // --------------------------
+            // FIX: Safety check for eventStartDate in navigation
+            // --------------------------
+            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
+                eventStartDate = new Date();
+            }
+
             const totalMonths = 12;
             const currentViewIndex = ((currentViewStartYear - eventStartDate.getFullYear()) * 12) + 
                                     (currentViewStartMonth - eventStartDate.getMonth());
@@ -688,6 +721,12 @@
 
         function renderAllCalendars() {
             calendarsContainer.innerHTML = '';
+            // --------------------------
+            // FIX: Safety check for eventEndDate
+            // --------------------------
+            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
+                eventStartDate = new Date();
+            }
             const eventEndDate = new Date(eventStartDate);
             eventEndDate.setFullYear(eventEndDate.getFullYear() + 1);
 
