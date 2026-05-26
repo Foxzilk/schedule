@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meetup Planner | Event Manager</title>
+    <style>
+        /* Macaron Theme (consistent with calendar) */
+        :root {
+            --macaron-bg: #FFFDFD;
+            --macaron-pink: #FCE4EC;
+            --macaron-blue: #E8F4F8;
+            --macaron-yellow: #FFF9E6;
+            --macaron-green: #F0F7F0;
+            --macaron-lavender: #F3EAF9;
+            --macaron-text: #7D6D7D;
+            --macaron-border: #F1EAEF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--macaron-text);
+        }
+
+        body {
+            background: var(--macaron-bg);
+            padding: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--macaron-lavender);
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .event-title {
+            font-size: 2rem;
+            margin-bottom: 0.8rem;
+        }
+
+        /* Create Event Section */
+        .create-event {
+            background: var(--macaron-blue);
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        #eventName {
+            padding: 0.8rem 1rem;
+            border: none;
+            border-radius: 12px;
+            width: 300px;
+            margin: 0.5rem;
+            font-size: 1rem;
+            background: white;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--macaron-pink);
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            margin: 0.5rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        /* Events List */
+        .events-list {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        }
+
+        .events-list h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--macaron-text);
+        }
+
+        .event-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--macaron-yellow);
+            padding: 1rem 1.5rem;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            transition: 0.2s;
+        }
+
+        .event-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.06);
+        }
+
+        .event-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .event-meta {
+            font-size: 0.85rem;
+            color: #998e99;
+            margin-top: 0.3rem;
+        }
+
+        .event-actions {
+            display: flex;
+            gap: 0.8rem;
+        }
+
+        .edit-btn {
+            background: var(--macaron-green);
+        }
+
+        .delete-btn {
+            background: #FFE0E8; /* Soft red */
+        }
+
+        .no-events {
+            text-align: center;
+            padding: 2rem;
+            color: #998e99;
+            font-size: 1.1rem;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.1rem;
+            color: var(--macaron-text);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .event-card {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            .event-actions {
+                width: 100%;
+                justify-content: center;
+            }
+            #eventName {
+                width: 100%;
+            }
+        }
+    </style>
+    <!-- Firebase Modular SDK (v12+) -->
+    <script type="module">
+        // Import required Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getDatabase, ref, onValue, push, set, update, remove } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+
+        // Your complete Firebase configuration (with Asia SE1 database URL)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBFOfYtsqqwX4Q1kVvJB1o1Dypvm-SljgU",
+            authDomain: "meetupplanner-e3d75.firebaseapp.com",
+            databaseURL: "https://meetupplanner-e3d75-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "meetupplanner-e3d75",
+            storageBucket: "meetupplanner-e3d75.firebasestorage.app",
+            messagingSenderId: "926639937973",
+            appId: "1:926639937973:web:ae52065c3907147166e1fc"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const eventsRef = ref(db, 'meetupEvents');
+
+        // DOM Elements
+        const eventNameInput = document.getElementById('eventName');
+        const eventsContainer = document.getElementById('eventsContainer');
+
+        // --------------------------
+        // Load Events from Firebase (Realtime Sync)
+        // --------------------------
+        onValue(eventsRef, (snapshot) => {
+            const eventsData = snapshot.val() || {};
+            const events = Object.keys(eventsData).map(id => ({
+                id: id,
+                ...eventsData[id]
+            }));
+            renderEventsList(events);
+        });
+
+        // --------------------------
+        // Create New Event (Save to Firebase)
+        // --------------------------
+        window.createNewEvent = function() {
+            const eventName = eventNameInput.value.trim();
+            if (!eventName) return alert('Please enter an event name!');
+
+            // Create event object
+            const newEvent = {
+                name: eventName,
+                createdAt: new Date().toISOString(),
+                createdDateFormatted: new Date().toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                })
+            };
+
+            // Save to Firebase (auto-generates unique ID)
+            const newEventRef = push(eventsRef);
+            set(newEventRef, newEvent)
+                .then(() => {
+                    // Reset input and show success
+                    eventNameInput.value = '';
+                    alert(`Event "${eventName}" created! Click to open the availability calendar.`);
+                })
+                .catch((error) => {
+                    alert(`Error creating event: ${error.message}`);
+                });
+        };
+
+        // --------------------------
+        // Render Events List
+        // --------------------------
+        function renderEventsList(events) {
+            if (events.length === 0) {
+                eventsContainer.innerHTML = `<div class="no-events">No events yet! Create your first meetup event above.</div>`;
+                return;
+            }
+
+            // Render all events
+            eventsContainer.innerHTML = events.map(event => `
+                <div class="event-card" data-event-id="${event.id}">
+                    <div>
+                        <div class="event-name" onclick="openEventCalendar('${event.id}')">${event.name}</div>
+                        <div class="event-meta">Created on: ${event.createdDateFormatted}</div>
+                    </div>
+                    <div class="event-actions">
+                        <button class="edit-btn" onclick="editEvent('${event.id}', '${event.name}')">Rename</button>
+                        <button class="delete-btn" onclick="deleteEvent('${event.id}', '${event.name}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --------------------------
+        // Open Event Calendar (Shareable Link)
+        // --------------------------
+        window.openEventCalendar = function(eventId) {
+            // Use absolute URL for sharing (replace with your deployment URL if hosting)
+            const calendarUrl = `${window.location.origin}/calendar.html?eventId=${eventId}`;
+            window.location.href = calendarUrl;
+        };
+
+        // --------------------------
+        // Edit Event Name
+        // --------------------------
+        window.editEvent = function(eventId, currentName) {
+            const newName = prompt('Edit event name:', currentName);
+            if (!newName || newName.trim() === '') return;
+
+            // Update in Firebase
+            update(ref(db, `meetupEvents/${eventId}`), { name: newName.trim() })
+                .catch((error) => {
+                    alert(`Error editing event: ${error.message}`);
+                });
+        };
+
+        // --------------------------
+        // Delete Event (and its availability data)
+        // --------------------------
+        window.deleteEvent = function(eventId, eventName) {
+            if (confirm(`Are you sure you want to delete "${eventName}"? This will delete all availability data for this event.`)) {
+                // Delete event and its availability data
+                remove(ref(db, `meetupEvents/${eventId}`))
+                remove(ref(db, `meetupAvailability/${eventId}`))
+                    .catch((error) => {
+                        alert(`Error deleting event: ${error.message}`);
+                    });
+            }
+        };
+    </script>
+</head>
+<body>
+    <div class="header">
+        <h1 class="event-title">🎀 Meetup Event Planner</h1>
+        <p>Create, manage, and share meetup availability calendars (syncs across devices!)</p>
+    </div>
+
+    <!-- Create New Event -->
+    <div class="create-event">
+        <h3>Create a New Meetup Event</h3>
+        <input type="text" id="eventName" placeholder="Event name (e.g., Summer BBQ, Team Offsite)" required>
+        <button onclick="createNewEvent()">Create Event</button>
+    </div>
+
+    <!-- Existing Events List -->
+    <div class="events-list">
+        <h2>Your Events</h2>
+        <div id="eventsContainer" class="events-container">
+            <div class="loading">Loading events...</div>
+        </div>
+    </div>
+</body>
+</html>

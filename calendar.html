@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>%EVENT_NAME% | Meetup Availability</title>
+    <style>
+        /* --------------------------
+           EXTRA-LIGHT MACARON PALETTE (Ultra Soft Pastels)
+           -------------------------- */
+        :root {
+            --macaron-bg: #FFFDFD;
+            --macaron-pink: #FCE4EC;
+            --macaron-blue: #E8F4F8;
+            --macaron-yellow: #FFF9E6; /* For 1+ attendees */
+            --macaron-green: #F0F7F0;
+            --macaron-lavender: #F3EAF9;
+            --macaron-text: #7D6D7D;
+            --macaron-best-day: #FFE6EE; /* Pink for best day */
+            --macaron-unselected: #F8F6F7; /* Grey for 0 attendees */
+            --macaron-border: #F1EAEF;
+            --grid-gap: 5px; /* Unified gap for all grid items */
+            --cell-size: 1fr; /* Fixed equal sizing for all cells */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--macaron-text);
+        }
+
+        body {
+            background-color: var(--macaron-bg);
+            padding: 1.5rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        /* Back to Homepage Button */
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 1rem;
+            padding: 0.6rem 1.2rem;
+            background: var(--macaron-lavender);
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .back-btn:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        /* Header & Event Section */
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: var(--macaron-lavender);
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .event-title {
+            font-size: 1.8rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .event-meta {
+            font-size: 0.9rem;
+            color: #998e99;
+        }
+
+        .share-link {
+            background: white;
+            padding: 0.6rem 1rem;
+            border-radius: 12px;
+            border: 1px solid var(--macaron-border);
+            margin-top: 0.8rem;
+            display: inline-block;
+        }
+
+        /* User Input Section */
+        .user-section {
+            background: var(--macaron-blue);
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        #userName {
+            padding: 0.8rem 1rem;
+            border: none;
+            border-radius: 12px;
+            width: 240px;
+            margin: 0.5rem;
+            font-size: 1rem;
+            background: white;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--macaron-pink);
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            margin: 0.5rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        /* Calendar Navigation (Arrows) */
+        .calendar-nav {
+            text-align: center;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            padding: 0.6rem 1rem;
+            background: var(--macaron-lavender);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .nav-label {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        /* Multi-Month Calendar Layout */
+        .calendars-wrapper {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .calendar-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            width: 100%;
+        }
+
+        .calendar-header {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .month-year {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        /* 🔑 PERFECT ALIGNMENT FIX - Unified Grid System */
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, var(--cell-size));
+            gap: var(--grid-gap);
+            width: 100%;
+            margin: 0 auto;
+            justify-items: center; /* Center all grid items horizontally */
+        }
+
+        /* Weekday Labels (Sun-Sat) - Exact Centering */
+        .day-name {
+            text-align: center;
+            font-weight: 600;
+            background: var(--macaron-yellow);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            /* Exact same dimensions as date cells */
+            width: 100%;
+            height: 45px;
+            display: flex;
+            align-items: center; /* Vertical center */
+            justify-content: center; /* Horizontal center */
+            padding: 0;
+            margin: 0;
+        }
+
+        /* Date Cells - Smaller Date + Perfect Centering + Hover Tooltip */
+        .date-cell {
+            width: 100%;
+            height: 45px;
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* Vertical center */
+            justify-content: center; /* Horizontal center */
+            background: var(--macaron-unselected); /* Default: grey (0 attendees) */
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+            position: relative;
+            padding: 0.2rem;
+            margin: 0;
+        }
+
+        /* Smaller date number (requested shrink) */
+        .date-num {
+            font-weight: 600;
+            font-size: 0.85rem; /* Smaller than before (was 1rem) */
+            line-height: 1;
+        }
+
+        .attendee-count {
+            font-size: 0.65rem; /* Slightly smaller to match date size */
+            margin-top: 0.1rem;
+            line-height: 1;
+        }
+
+        .date-cell.empty {
+            background: transparent;
+            cursor: default;
+            border: none;
+        }
+
+        /* New Color Logic: */
+        .date-cell.has-attendees {
+            background: var(--macaron-yellow); /* Yellow for 1+ attendees */
+        }
+
+        .date-cell.best-day {
+            background: var(--macaron-best-day); /* Pink for best day (most attendees) */
+            border: 2px solid var(--macaron-pink);
+        }
+
+        /* Hover Tooltip (Show Who's Available) */
+        .date-cell .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            bottom: 100%; /* Show above the cell */
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            border: 1px solid var(--macaron-border);
+            border-radius: 8px;
+            padding: 0.5rem 0.8rem;
+            min-width: 120px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            z-index: 100;
+            transition: opacity 0.2s ease;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Show tooltip on hover */
+        .date-cell:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Best Day Badge */
+        .best-day-badge {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: var(--macaron-pink);
+            color: var(--macaron-text);
+            font-size: 0.65rem;
+            padding: 0.15rem 0.4rem;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        /* Attendee List */
+        .attendee-list {
+            margin-top: 1rem;
+            padding: 1.5rem;
+            background: var(--macaron-green);
+            border-radius: 20px;
+        }
+
+        .attendee-list h3 {
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        #attendees {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+            justify-content: center;
+        }
+
+        .attendee-tag {
+            background: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        /* Error Message */
+        .error-message {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.2rem;
+            color: #ff6b8b;
+        }
+
+        /* Loading Spinner */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            font-size: 1.1rem;
+            color: var(--macaron-text);
+        }
+
+        /* Responsive Fix */
+        @media (max-width: 768px) {
+            .calendars-wrapper {
+                grid-template-columns: 1fr;
+            }
+            .day-name, .date-cell {
+                height: 40px; /* Slightly smaller on mobile, still aligned */
+            }
+            .date-num {
+                font-size: 0.8rem; /* Even smaller on mobile */
+            }
+            .nav-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+    <!-- Firebase Modular SDK (v12+) -->
+    <script type="module">
+        // Import required Firebase functions
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, get, update } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
+
+        // Your complete Firebase configuration (with Asia SE1 database URL)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBFOfYtsqqwX4Q1kVvJB1o1Dypvm-SljgU",
+            authDomain: "meetupplanner-e3d75.firebaseapp.com",
+            databaseURL: "https://meetupplanner-e3d75-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "meetupplanner-e3d75",
+            storageBucket: "meetupplanner-e3d75.firebasestorage.app",
+            messagingSenderId: "926639937973",
+            appId: "1:926639937973:web:ae52065c3907147166e1fc"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // --------------------------
+        // Event Setup (Load from URL Parameter)
+        // --------------------------
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventId = urlParams.get('eventId');
+        let currentEvent = null;
+        let eventStartDate = null;
+
+        // DOM Elements
+        const calendarsContainer = document.getElementById('calendarsContainer');
+        const userNameInput = document.getElementById('userName');
+        const attendeesEl = document.getElementById('attendees');
+        const shareUrlEl = document.getElementById('shareUrl');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const navLabel = document.getElementById('navLabel');
+        const eventTitle = document.getElementById('eventTitle');
+        const eventCreatedAt = document.getElementById('eventCreatedAt');
+
+        // Load Event Data from Firebase
+        if (!eventId) {
+            showError("No event ID found! Please open this calendar from the events homepage.");
+        } else {
+            // Get event details
+            get(ref(db, `meetupEvents/${eventId}`))
+                .then((snapshot) => {
+                    currentEvent = snapshot.val();
+                    if (!currentEvent) {
+                        showError("Event not found! It may have been deleted.");
+                        return;
+                    }
+
+                    // Set event info
+                    eventTitle.textContent = `🎀 ${currentEvent.name}`;
+                    eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted}`;
+                    shareUrlEl.textContent = window.location.href;
+
+                    // Set 12-month range
+                    eventStartDate = new Date(currentEvent.createdAt);
+                    const eventEndDate = new Date(eventStartDate);
+                    eventEndDate.setFullYear(eventEndDate.getFullYear() + 1);
+
+                    // Initialize calendar
+                    initCalendar();
+                    // Load availability data (realtime sync)
+                    loadAvailabilityData();
+                })
+                .catch((error) => {
+                    showError(`Error loading event: ${error.message}`);
+                });
+        }
+
+        // --------------------------
+        // Calendar Configuration
+        // --------------------------
+        let currentUser = localStorage.getItem('meetupUserName') || ''; // Local for user name (per device)
+        let availabilityData = { attendees: {}, bestDay: null };
+        const MONTHS_PER_VIEW = 3;
+        let currentViewStartMonth = 0;
+        let currentViewStartYear = 0;
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"];
+        const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+        // --------------------------
+        // Initialize Calendar
+        // --------------------------
+        function initCalendar() {
+            currentViewStartMonth = eventStartDate.getMonth();
+            currentViewStartYear = eventStartDate.getFullYear();
+            if (currentUser) userNameInput.value = currentUser;
+            updateNavigation();
+            calculateBestDay();
+            renderAllCalendars();
+            renderAttendeeList();
+        }
+
+        // --------------------------
+        // Load Availability Data (Realtime Sync)
+        // --------------------------
+        function loadAvailabilityData() {
+            const availabilityRef = ref(db, `meetupAvailability/${eventId}`);
+            onValue(availabilityRef, (snapshot) => {
+                availabilityData = snapshot.val() || { attendees: {}, bestDay: null };
+                initCalendar();
+            });
+        }
+
+        // --------------------------
+        // Save Availability Data to Firebase
+        // --------------------------
+        function saveAvailabilityData() {
+            const availabilityRef = ref(db, `meetupAvailability/${eventId}`);
+            set(availabilityRef, availabilityData)
+                .catch((error) => {
+                    alert(`Error saving data: ${error.message}`);
+                });
+        }
+
+        // --------------------------
+        // Core Functions (Exposed to window for HTML access)
+        // --------------------------
+        window.saveUserName = function() {
+            const name = userNameInput.value.trim();
+            if (!name) return alert('Please enter your name!');
+            currentUser = name;
+            localStorage.setItem('meetupUserName', name); // Save name locally
+            if (!availabilityData.attendees[name]) {
+                availabilityData.attendees[name] = [];
+                saveAvailabilityData();
+            }
+            alert(`Hi ${name}! Click dates to mark availability for ${currentEvent.name}.`);
+            renderAllCalendars();
+            renderAttendeeList();
+        };
+
+        window.toggleDate = function(dateStr) {
+            if (!currentUser) return alert('Enter your name first!');
+            const userDates = availabilityData.attendees[currentUser];
+            const index = userDates.indexOf(dateStr);
+            index === -1 ? userDates.push(dateStr) : userDates.splice(index, 1);
+            calculateBestDay();
+            saveAvailabilityData();
+            renderAllCalendars();
+        };
+
+        window.navigateMonths = function(direction) {
+            let newMonth = currentViewStartMonth + (direction * MONTHS_PER_VIEW);
+            let newYear = currentViewStartYear;
+
+            if (newMonth < 0) {
+                newMonth += 12;
+                newYear -= 1;
+            } else if (newMonth > 11) {
+                newMonth -= 12;
+                newYear += 1;
+            }
+
+            currentViewStartMonth = newMonth;
+            currentViewStartYear = newYear;
+            updateNavigation();
+            renderAllCalendars();
+        };
+
+        // --------------------------
+        // Helper Functions
+        // --------------------------
+        function getAttendeeCount(dateStr) {
+            let count = 0;
+            Object.values(availabilityData.attendees).forEach(dates => {
+                if (dates.includes(dateStr)) count++;
+            });
+            return count;
+        }
+
+        function getPeopleAvailable(dateStr) {
+            const availablePeople = [];
+            for (const [name, dates] of Object.entries(availabilityData.attendees)) {
+                if (dates.includes(dateStr)) {
+                    availablePeople.push(name);
+                }
+            }
+            return availablePeople.length > 0 
+                ? availablePeople.join(", ") 
+                : "No one available";
+        }
+
+        function calculateBestDay() {
+            const dateCounts = {};
+            let maxCount = 0;
+            let bestDay = null;
+            Object.values(availabilityData.attendees).forEach(dates => {
+                dates.forEach(date => {
+                    dateCounts[date] = (dateCounts[date] || 0) + 1;
+                    if (dateCounts[date] > maxCount) {
+                        maxCount = dateCounts[date];
+                        bestDay = date;
+                    }
+                });
+            });
+            availabilityData.bestDay = bestDay;
+        }
+
+        function updateNavigation() {
+            const totalMonths = 12;
+            const currentViewIndex = ((currentViewStartYear - eventStartDate.getFullYear()) * 12) + 
+                                    (currentViewStartMonth - eventStartDate.getMonth());
+
+            prevBtn.disabled = currentViewIndex === 0;
+            nextBtn.disabled = currentViewIndex >= totalMonths - MONTHS_PER_VIEW;
+            
+            const endMonthIdx = currentViewIndex + MONTHS_PER_VIEW - 1;
+            const endDate = new Date(eventStartDate);
+            endDate.setMonth(eventStartDate.getMonth() + endMonthIdx);
+            
+            const startDateLabel = new Date(eventStartDate);
+            startDateLabel.setMonth(eventStartDate.getMonth() + currentViewIndex);
+
+            navLabel.textContent = `${monthNames[startDateLabel.getMonth()].slice(0,3)} - ${monthNames[endDate.getMonth()].slice(0,3)} ${startDateLabel.getFullYear()}`;
+        }
+
+        function renderAllCalendars() {
+            calendarsContainer.innerHTML = '';
+            const eventEndDate = new Date(eventStartDate);
+            eventEndDate.setFullYear(eventEndDate.getFullYear() + 1);
+
+            for (let i = 0; i < MONTHS_PER_VIEW; i++) {
+                let month = currentViewStartMonth + i;
+                let year = currentViewStartYear;
+
+                if (month > 11) {
+                    month -= 12;
+                    year += 1;
+                }
+
+                const testDate = new Date(year, month, 1);
+                if (testDate > eventEndDate) break;
+
+                renderSingleCalendar(year, month);
+            }
+        }
+
+        function renderSingleCalendar(year, month) {
+            const cal = document.createElement('div');
+            cal.className = 'calendar-container';
+
+            cal.innerHTML = `
+                <div class="calendar-header">
+                    <h2 class="month-year">${monthNames[month]} ${year}</h2>
+                </div>
+                <div class="days-grid">${dayNames.map(d => `<div class="day-name">${d}</div>`).join('')}</div>
+                <div class="days-grid" id="calendar-${year}-${month}"></div>
+            `;
+            calendarsContainer.appendChild(cal);
+
+            const dateGrid = document.getElementById(`calendar-${year}-${month}`);
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const totalAttendees = Object.keys(availabilityData.attendees).length;
+
+            for (let i = 0; i < firstDay; i++) {
+                dateGrid.innerHTML += `<div class="date-cell empty"></div>`;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${year}-${(month+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
+                const count = getAttendeeCount(dateStr);
+                const isBestDay = availabilityData.bestDay === dateStr;
+                const availablePeople = getPeopleAvailable(dateStr);
+
+                let cellClass = '';
+                if (isBestDay) {
+                    cellClass = 'best-day';
+                } else if (count >= 1) {
+                    cellClass = 'has-attendees';
+                }
+
+                dateGrid.innerHTML += `
+                    <div class="date-cell ${cellClass}" 
+                         onclick="toggleDate('${dateStr}')">
+                        ${isBestDay ? '<span class="best-day-badge">BEST</span>' : ''}
+                        <div class="tooltip">Available: ${availablePeople}</div>
+                        <span class="date-num">${day}</span>
+                        <span class="attendee-count">${count}/${totalAttendees}</span>
+                    </div>
+                `;
+            }
+        }
+
+        function renderAttendeeList() {
+            attendeesEl.innerHTML = '';
+            Object.keys(availabilityData.attendees).forEach(name => {
+                attendeesEl.innerHTML += `<span class="attendee-tag">${name}</span>`;
+            });
+        }
+
+        function showError(message) {
+            document.body.innerHTML = `
+                <div class="error-message">
+                    ❌ ${message} <br><br>
+                    <a href="index.html" class="back-btn">← Back to Events</a>
+                </div>
+            `;
+        }
+    </script>
+</head>
+<body>
+    <!-- Back to Homepage -->
+    <a href="index.html" class="back-btn">← Back to Events</a>
+
+    <!-- Header / Event Section -->
+    <div class="header">
+        <h1 class="event-title" id="eventTitle">🎀 Loading Event...</h1>
+        <p class="event-meta" id="eventCreatedAt">Created on: Loading...</p>
+        <p>Select your available days → everyone sees the results!</p>
+        <div class="share-link">
+            🔗 Invitation Link: <span id="shareUrl">Loading...</span>
+        </div>
+    </div>
+
+    <!-- User Name Input -->
+    <div class="user-section">
+        <h3>Enter Your Name to Start</h3>
+        <input type="text" id="userName" placeholder="Your name (e.g. Alex)" required>
+        <button onclick="saveUserName()">Save My Name</button>
+        <p style="margin-top:0.8rem; font-size:0.9rem;">Click dates to mark your availability</p>
+    </div>
+
+    <!-- Calendar Navigation (Arrows) -->
+    <div class="calendar-nav">
+        <button class="nav-btn" id="prevBtn" onclick="navigateMonths(-1)" disabled>←</button>
+        <span class="nav-label" id="navLabel">Loading...</span>
+        <button class="nav-btn" id="nextBtn" onclick="navigateMonths(1)">→</button>
+    </div>
+
+    <!-- MULTI-MONTH CALENDARS (3 Months at a time, 12 total) -->
+    <div class="calendars-wrapper" id="calendarsContainer">
+        <div class="loading">Loading calendar...</div>
+    </div>
+
+    <!-- Attendee List -->
+    <div class="attendee-list">
+        <h3>👯 Attendees & Their Availability</h3>
+        <div id="attendees"></div>
+    </div>
+</body>
+</html>
