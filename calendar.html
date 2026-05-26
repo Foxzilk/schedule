@@ -76,61 +76,13 @@
             color: #998e99;
         }
 
-        /* --------------------------
-           MOBILE-FRIENDLY SHARE LINK STYLES
-           -------------------------- */
-        .share-container {
+        .share-link {
             background: white;
-            padding: 0.8rem 1rem;
+            padding: 0.6rem 1rem;
             border-radius: 12px;
             border: 1px solid var(--macaron-border);
             margin-top: 0.8rem;
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            width: 100%;
-            max-width: 90%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .share-label {
-            font-size: 0.9rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .share-link {
-            flex: 1;
-            min-width: 0; /* Critical for text wrapping on mobile */
-            font-size: 0.85rem;
-            color: #0066cc;
-            word-break: break-all; /* Break long URLs on mobile */
-            padding: 0.2rem 0;
-        }
-
-        .copy-btn {
-            padding: 0.4rem 0.8rem;
-            background: var(--macaron-pink);
-            border: none;
-            border-radius: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            white-space: nowrap;
-        }
-
-        .copy-btn:hover {
-            opacity: 0.9;
-            transform: scale(1.05);
-        }
-
-        .copy-btn.copied {
-            background: #d4edda;
-            color: #155724;
+            display: inline-block;
         }
 
         /* User Input Section */
@@ -391,7 +343,7 @@
                 grid-template-columns: 1fr;
             }
             .day-name, .date-cell {
-                height: 40px; /* Slightly smaller on mobile */
+                height: 40px; /* Slightly smaller on mobile, still aligned */
             }
             .date-num {
                 font-size: 0.8rem; /* Even smaller on mobile */
@@ -400,20 +352,6 @@
                 width: 35px;
                 height: 35px;
                 font-size: 1rem;
-            }
-            .share-container {
-                max-width: 100%;
-                padding: 0.6rem 0.8rem;
-            }
-            .share-label {
-                font-size: 0.8rem;
-            }
-            .share-link {
-                font-size: 0.75rem;
-            }
-            .copy-btn {
-                padding: 0.3rem 0.6rem;
-                font-size: 0.75rem;
             }
         }
     </style>
@@ -451,7 +389,6 @@
         const userNameInput = document.getElementById('userName');
         const attendeesEl = document.getElementById('attendees');
         const shareUrlEl = document.getElementById('shareUrl');
-        const copyBtn = document.getElementById('copyBtn');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
         const navLabel = document.getElementById('navLabel');
@@ -471,26 +408,16 @@
                         return;
                     }
 
-                    // --------------------------
-                    // FIX: Validate eventStartDate (critical fix for getMonth() error)
-                    // --------------------------
-                    // Check if createdAt exists and is a valid date
-                    if (!currentEvent.createdAt || isNaN(new Date(currentEvent.createdAt).getTime())) {
-                        // Fallback to current date if createdAt is missing/invalid
-                        eventStartDate = new Date();
-                        console.warn("Event 'createdAt' is missing/invalid - using current date as fallback");
-                    } else {
-                        eventStartDate = new Date(currentEvent.createdAt);
-                    }
-
                     // Set event info
-                    eventTitle.textContent = `🎀 ${currentEvent.name || "Untitled Event"}`;
-                    eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted || new Date().toLocaleDateString()}`;
-                    
-                    // Set share link (mobile-friendly)
-                    const shareUrl = window.location.href;
-                    shareUrlEl.textContent = shareUrl;
-                    
+                    eventTitle.textContent = `🎀 ${currentEvent.name}`;
+                    eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted}`;
+                    shareUrlEl.textContent = window.location.href;
+
+                    // Set 12-month range (from event creation date)
+                    eventStartDate = new Date(currentEvent.createdAt);
+                    const eventEndDate = new Date(eventStartDate);
+                    eventEndDate.setFullYear(eventEndDate.getFullYear() + 1);
+
                     // Initialize calendar (first load - reset view to event creation month)
                     initCalendar(false);
                     // Load availability data (realtime sync)
@@ -500,47 +427,6 @@
                     showError(`Error loading event: ${error.message}`);
                 });
         }
-
-        // --------------------------
-        // COPY TO CLIPBOARD FUNCTION
-        // --------------------------
-        window.copyShareLink = function() {
-            const link = shareUrlEl.textContent;
-            if (!link || link === "Loading...") {
-                alert("Share link not ready yet!");
-                return;
-            }
-
-            // Copy to clipboard
-            navigator.clipboard.writeText(link)
-                .then(() => {
-                    // Visual feedback for copy success
-                    copyBtn.textContent = "Copied!";
-                    copyBtn.classList.add('copied');
-                    
-                    // Reset button text after 2 seconds
-                    setTimeout(() => {
-                        copyBtn.textContent = "Copy Link";
-                        copyBtn.classList.remove('copied');
-                    }, 2000);
-                })
-                .catch(() => {
-                    // Fallback for older browsers
-                    const textArea = document.createElement('textarea');
-                    textArea.value = link;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    
-                    copyBtn.textContent = "Copied!";
-                    copyBtn.classList.add('copied');
-                    setTimeout(() => {
-                        copyBtn.textContent = "Copy Link";
-                        copyBtn.classList.remove('copied');
-                    }, 2000);
-                });
-        };
 
         // --------------------------
         // Calendar Configuration
@@ -555,16 +441,9 @@
         const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
         // --------------------------
-        // Initialize Calendar (PRESERVES CURRENT VIEW + SAFETY CHECKS)
+        // Initialize Calendar (PRESERVES CURRENT VIEW)
         // --------------------------
         function initCalendar(preserveView = false) {
-            // --------------------------
-            // FIX: Additional safety check for eventStartDate
-            // --------------------------
-            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
-                eventStartDate = new Date(); // Fallback to current date
-            }
-
             // Only reset view to event creation month if explicitly told to (first load)
             if (!preserveView) {
                 currentViewStartMonth = eventStartDate.getMonth();
@@ -613,7 +492,7 @@
                 availabilityData.attendees[name] = [];
                 saveAvailabilityData();
             }
-            alert(`Hi ${name}! Click dates to mark availability for ${currentEvent?.name || "this event"}.`);
+            alert(`Hi ${name}! Click dates to mark availability for ${currentEvent.name}.`);
             renderAllCalendars();
             renderAttendeeList();
         };
@@ -631,13 +510,6 @@
         };
 
         window.navigateMonths = function(direction) {
-            // --------------------------
-            // FIX: Safety check before navigation
-            // --------------------------
-            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
-                eventStartDate = new Date();
-            }
-
             let newMonth = currentViewStartMonth + (direction * MONTHS_PER_VIEW);
             let newYear = currentViewStartYear;
 
@@ -695,13 +567,6 @@
         }
 
         function updateNavigation() {
-            // --------------------------
-            // FIX: Safety check for eventStartDate in navigation
-            // --------------------------
-            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
-                eventStartDate = new Date();
-            }
-
             const totalMonths = 12;
             const currentViewIndex = ((currentViewStartYear - eventStartDate.getFullYear()) * 12) + 
                                     (currentViewStartMonth - eventStartDate.getMonth());
@@ -721,12 +586,6 @@
 
         function renderAllCalendars() {
             calendarsContainer.innerHTML = '';
-            // --------------------------
-            // FIX: Safety check for eventEndDate
-            // --------------------------
-            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
-                eventStartDate = new Date();
-            }
             const eventEndDate = new Date(eventStartDate);
             eventEndDate.setFullYear(eventEndDate.getFullYear() + 1);
 
@@ -820,12 +679,8 @@
         <h1 class="event-title" id="eventTitle">🎀 Loading Event...</h1>
         <p class="event-meta" id="eventCreatedAt">Created on: Loading...</p>
         <p>Select your available days → everyone sees the results!</p>
-        
-        <!-- MOBILE-FRIENDLY SHARE CONTAINER WITH COPY BUTTON -->
-        <div class="share-container">
-            <span class="share-label">Invitation Link:</span>
-            <span class="share-link" id="shareUrl">Loading...</span>
-            <button class="copy-btn" id="copyBtn" onclick="copyShareLink()">Copy Link</button>
+        <div class="share-link">
+            🔗 Invitation Link: <span id="shareUrl">Loading...</span>
         </div>
     </div>
 
