@@ -19,6 +19,7 @@
             --macaron-best-day: #FFE6EE; /* Pink for best day */
             --macaron-unselected: #F8F6F7; /* Grey for 0 attendees */
             --macaron-border: #F1EAEF;
+            --macaron-user-selected: #D1E7DD; /* Light blue for user's selected dates */
             --grid-gap: 5px; /* Unified gap for all grid items */
             --cell-size: 1fr; /* Fixed equal sizing for all cells */
         }
@@ -253,6 +254,22 @@
         .date-cell.best-day {
             background: var(--macaron-best-day); /* Pink for best day (most attendees) */
             border: 2px solid var(--macaron-pink);
+        }
+
+        /* User's selected date style */
+        .date-cell.user-selected {
+            background: var(--macaron-user-selected); /* Light blue for user's selected dates */
+            border: 1px solid #9BC2D8; /* Slightly darker border for better visibility */
+        }
+
+        /* Prioritize user selection over other styles but keep best day styling */
+        .date-cell.best-day.user-selected {
+            background: linear-gradient(135deg, var(--macaron-best-day) 50%, var(--macaron-user-selected) 50%);
+            border: 2px solid var(--macaron-pink);
+        }
+
+        .date-cell.has-attendees.user-selected:not(.best-day) {
+            background: linear-gradient(135deg, var(--macaron-yellow) 50%, var(--macaron-user-selected) 50%);
         }
 
         /* Hover Tooltip (Show Who's Available) */
@@ -550,6 +567,12 @@
                 : "No one available";
         }
 
+        // Check if current user has selected this date
+        function isUserSelected(dateStr) {
+            if (!currentUser || !availabilityData.attendees[currentUser]) return false;
+            return availabilityData.attendees[currentUser].includes(dateStr);
+        }
+
         function calculateBestDay() {
             const dateCounts = {};
             let maxCount = 0;
@@ -632,16 +655,16 @@
                 const count = getAttendeeCount(dateStr);
                 const isBestDay = availabilityData.bestDay === dateStr;
                 const availablePeople = getPeopleAvailable(dateStr);
+                const userSelected = isUserSelected(dateStr);
 
-                let cellClass = '';
-                if (isBestDay) {
-                    cellClass = 'best-day';
-                } else if (count >= 1) {
-                    cellClass = 'has-attendees';
-                }
+                // Build class list with priority: user-selected > best-day > has-attendees
+                let cellClasses = [];
+                if (userSelected) cellClasses.push('user-selected');
+                if (isBestDay) cellClasses.push('best-day');
+                else if (count >= 1) cellClasses.push('has-attendees');
 
                 dateGrid.innerHTML += `
-                    <div class="date-cell ${cellClass}" 
+                    <div class="date-cell ${cellClasses.join(' ')}" 
                          onclick="toggleDate('${dateStr}')">
                         ${isBestDay ? '<span class="best-day-badge">BEST</span>' : ''}
                         <div class="tooltip">Available: ${availablePeople}</div>
