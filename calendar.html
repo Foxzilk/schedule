@@ -19,9 +19,10 @@
             --macaron-best-day: #FFE6EE; /* Pink for best day */
             --macaron-unselected: #F8F6F7; /* Grey for 0 attendees */
             --macaron-border: #F1EAEF;
-            --macaron-user-selected: #D1E7DD; /* Light blue for user's selected dates */
             --grid-gap: 5px; /* Unified gap for all grid items */
             --cell-size: 1fr; /* Fixed equal sizing for all cells */
+            --user-selected-border: #4CAF50; /* Green for selection border */
+            --user-selected-border-width: 3px; /* Thick border */
         }
 
         * {
@@ -225,6 +226,13 @@
             position: relative;
             padding: 0.2rem;
             margin: 0;
+            /* Base transparent border to avoid layout shift when selected */
+            border: var(--user-selected-border-width) solid transparent;
+        }
+
+        /* User Selected Date - ONLY Thick Green Border (no background change) */
+        .date-cell.user-selected {
+            border-color: var(--user-selected-border);
         }
 
         /* Smaller date number (requested shrink) */
@@ -246,30 +254,21 @@
             border: none;
         }
 
-        /* New Color Logic: */
+        /* Original Color Logic (100% Preserved) */
         .date-cell.has-attendees {
             background: var(--macaron-yellow); /* Yellow for 1+ attendees */
         }
 
         .date-cell.best-day {
             background: var(--macaron-best-day); /* Pink for best day (most attendees) */
-            border: 2px solid var(--macaron-pink);
+            border: 2px solid var(--macaron-pink); /* Keep original best day border */
+            /* Override border width to avoid conflict with user selection */
+            border-width: calc(var(--user-selected-border-width) + 1px);
         }
 
-        /* User's selected date style */
-        .date-cell.user-selected {
-            background: var(--macaron-user-selected); /* Light blue for user's selected dates */
-            border: 1px solid #9BC2D8; /* Slightly darker border for better visibility */
-        }
-
-        /* Prioritize user selection over other styles but keep best day styling */
+        /* Ensure user selection border is visible even on best day */
         .date-cell.best-day.user-selected {
-            background: linear-gradient(135deg, var(--macaron-best-day) 50%, var(--macaron-user-selected) 50%);
-            border: 2px solid var(--macaron-pink);
-        }
-
-        .date-cell.has-attendees.user-selected:not(.best-day) {
-            background: linear-gradient(135deg, var(--macaron-yellow) 50%, var(--macaron-user-selected) 50%);
+            border-color: var(--user-selected-border);
         }
 
         /* Hover Tooltip (Show Who's Available) */
@@ -425,15 +424,20 @@
                         return;
                     }
 
-                    // Set event info
-                    eventTitle.textContent = `🎀 ${currentEvent.name}`;
-                    eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted}`;
-                    shareUrlEl.textContent = window.location.href;
+                    // --------------------------
+                    // Date Validation Fix (prevents getMonth() error)
+                    // --------------------------
+                    if (!currentEvent.createdAt || isNaN(new Date(currentEvent.createdAt).getTime())) {
+                        eventStartDate = new Date();
+                        console.warn("Event 'createdAt' is missing/invalid - using current date as fallback");
+                    } else {
+                        eventStartDate = new Date(currentEvent.createdAt);
+                    }
 
-                    // Set 12-month range (from event creation date)
-                    eventStartDate = new Date(currentEvent.createdAt);
-                    const eventEndDate = new Date(eventStartDate);
-                    eventEndDate.setFullYear(eventEndDate.getFullYear() + 1);
+                    // Set event info
+                    eventTitle.textContent = `🎀 ${currentEvent.name || "Untitled Event"}`;
+                    eventCreatedAt.textContent = `Created on: ${currentEvent.createdDateFormatted || new Date().toLocaleDateString()}`;
+                    shareUrlEl.textContent = window.location.href;
 
                     // Initialize calendar (first load - reset view to event creation month)
                     initCalendar(false);
@@ -461,6 +465,11 @@
         // Initialize Calendar (PRESERVES CURRENT VIEW)
         // --------------------------
         function initCalendar(preserveView = false) {
+            // Safety check for eventStartDate
+            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
+                eventStartDate = new Date();
+            }
+
             // Only reset view to event creation month if explicitly told to (first load)
             if (!preserveView) {
                 currentViewStartMonth = eventStartDate.getMonth();
@@ -509,12 +518,12 @@
                 availabilityData.attendees[name] = [];
                 saveAvailabilityData();
             }
-            alert(`Hi ${name}! Click dates to mark availability for ${currentEvent.name}.`);
+            alert(`Hi ${name}! Click dates to mark availability for ${currentEvent?.name || "this event"}.`);
             renderAllCalendars();
             renderAttendeeList();
         };
 
-        // FIXED: Toggle Date (no view reset)
+        // Toggle Date (no view reset)
         window.toggleDate = function(dateStr) {
             if (!currentUser) return alert('Enter your name first!');
             const userDates = availabilityData.attendees[currentUser];
@@ -522,11 +531,16 @@
             index === -1 ? userDates.push(dateStr) : userDates.splice(index, 1);
             calculateBestDay();
             saveAvailabilityData();
-            // Only re-render calendar (update colors/counts) - no view reset
+            // Only re-render calendar (update border/counts) - no view reset
             renderAllCalendars(); 
         };
 
         window.navigateMonths = function(direction) {
+            // Safety check for eventStartDate
+            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
+                eventStartDate = new Date();
+            }
+
             let newMonth = currentViewStartMonth + (direction * MONTHS_PER_VIEW);
             let newYear = currentViewStartYear;
 
@@ -567,7 +581,7 @@
                 : "No one available";
         }
 
-        // Check if current user has selected this date
+        // Check if current user selected this date (core for green border)
         function isUserSelected(dateStr) {
             if (!currentUser || !availabilityData.attendees[currentUser]) return false;
             return availabilityData.attendees[currentUser].includes(dateStr);
@@ -590,6 +604,11 @@
         }
 
         function updateNavigation() {
+            // Safety check for eventStartDate
+            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
+                eventStartDate = new Date();
+            }
+
             const totalMonths = 12;
             const currentViewIndex = ((currentViewStartYear - eventStartDate.getFullYear()) * 12) + 
                                     (currentViewStartMonth - eventStartDate.getMonth());
@@ -609,6 +628,10 @@
 
         function renderAllCalendars() {
             calendarsContainer.innerHTML = '';
+            // Safety check for eventStartDate
+            if (!eventStartDate || isNaN(eventStartDate.getTime())) {
+                eventStartDate = new Date();
+            }
             const eventEndDate = new Date(eventStartDate);
             eventEndDate.setFullYear(eventEndDate.getFullYear() + 1);
 
@@ -646,10 +669,12 @@
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             const totalAttendees = Object.keys(availabilityData.attendees).length;
 
+            // Add empty cells for leading days
             for (let i = 0; i < firstDay; i++) {
                 dateGrid.innerHTML += `<div class="date-cell empty"></div>`;
             }
 
+            // Render each date cell
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${year}-${(month+1).toString().padStart(2,'0')}-${day.toString().padStart(2,'0')}`;
                 const count = getAttendeeCount(dateStr);
@@ -657,12 +682,13 @@
                 const availablePeople = getPeopleAvailable(dateStr);
                 const userSelected = isUserSelected(dateStr);
 
-                // Build class list with priority: user-selected > best-day > has-attendees
+                // Build class list (preserve original color logic + add user-selected for border)
                 let cellClasses = [];
-                if (userSelected) cellClasses.push('user-selected');
-                if (isBestDay) cellClasses.push('best-day');
-                else if (count >= 1) cellClasses.push('has-attendees');
+                if (userSelected) cellClasses.push('user-selected'); // Add green border class
+                if (isBestDay) cellClasses.push('best-day'); // Pink background (original)
+                else if (count >= 1) cellClasses.push('has-attendees'); // Yellow background (original)
 
+                // Render cell with classes
                 dateGrid.innerHTML += `
                     <div class="date-cell ${cellClasses.join(' ')}" 
                          onclick="toggleDate('${dateStr}')">
@@ -682,7 +708,7 @@
             });
         }
 
-        // FIXED: Back link for /schedule/ GitHub Pages path
+        // Error handling (fixed back link for GitHub Pages)
         function showError(message) {
             document.body.innerHTML = `
                 <div class="error-message">
@@ -694,7 +720,7 @@
     </script>
 </head>
 <body>
-    <!-- Back to Events (FIXED: /schedule/ path) -->
+    <!-- Back to Events (fixed /schedule/ path) -->
     <a href="/schedule/index.html" class="back-btn">← Back to Events</a>
 
     <!-- Header / Event Section -->
